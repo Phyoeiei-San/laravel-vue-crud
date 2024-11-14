@@ -52,27 +52,24 @@ class PostController extends Controller
      */
     public function update(Request $request, Post $post)
     {
+        $validatedData = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
 
-
-
-        // $validatedData = $request->validate([
-        //     'title' => 'required|string|max:255',
-        //     'description' => 'required|string',
-        //     'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        // ]);
-
-        // $post = Post::findOrFail($post);
-
-        // If a new image is uploaded, replace the old one
+        // Update image if a new one is provided
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('images', 'public');
             $validatedData['image'] = $imagePath;
         }
 
-        $post->update($request->all());
+        // Update the post with validated data
+        $post->update($validatedData);
 
         return response()->json(['message' => 'Post updated successfully', 'post' => $post], 200);
     }
+
 
 
     /**

@@ -3,10 +3,10 @@
       <!-- Form Section -->
       <div class="card shadow mb-4">
         <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Create New Post</h5>
+          <h5 class="mb-0">{{ editId ? 'Update New Post' : 'Create New Post' }}</h5>
         </div>
         <div class="card-body">
-          <form  >
+            <form @submit.prevent="editId ? updatePost() : createPost()">
             <div class="mb-3 row">
               <label for="title" class="col-sm-2 col-form-label fw-bold">Title</label>
               <div class="col-sm-10">
@@ -25,22 +25,19 @@
               <label for="fileInput" class="col-sm-2 col-form-label fw-bold">Image</label>
               <div class="col-sm-10">
                 <!-- <input type="file" class="form-control" id="fileInput"> -->
-                <input type="file" class="form-control" id="fileInput" @change="onFileChange">
+                <input type="file" class="form-control" id="fileInput" @change="onFileChange" >
                 <small class="text-danger" v-if="validation.imageStatus">Image Is Required</small>
 
                 <div v-if="imagePreview" class="mt-3">
         <p>Current Image:</p>
-        <img :src="imagePreview" width="100" height="100" alt="Current Image Preview">
+        <img :src="imagePreview" width="100" height="100" alt="Current Image Preview" >
       </div>
 
               </div>
             </div>
             <div class="text-center">
-             <!-- <button type="submit" class="btn btn-primary">
-                {{ editId ? 'Update' : 'Create' }}
-             </button> -->
-             <button type="submit" class="btn btn-primary" @click="updatePosts" v-if="editId">Update</button>
-             <button type="submit" class="btn btn-primary" @click="createPost" v-else>Create</button>
+                <button type="submit" class="btn btn-primary">{{ editId ? 'Update' : 'Create' }}</button>
+
             </div>
           </form>
         </div>
@@ -69,7 +66,7 @@
                 <td>{{ post.description }}</td>
                 <td>
 
-                <img v-if="post.image" :src="`/storage/${post.image}`"  width="100" height="1000">
+                <img v-if="post.image" :src="`/storage/${post.image}`"  width="100" height="1000" >
                 <span v-else>No Image</span> <!-- Fallback if no image is uploaded -->
 
                 </td>
@@ -113,9 +110,13 @@
 
     },
     methods: {
-      onFileChange(event) {
-      this.image = event.target.files[0];
-      },
+        onFileChange(event) {
+        this.image = event.target.files[0]; // Capture the selected file
+        if (this.image) {
+    this.imagePreview = URL.createObjectURL(this.image); // Create preview URL for image
+  }
+},
+
 
   async createPost() {
     // Validate inputs
@@ -172,25 +173,52 @@
   },
 
 
-  async updatePosts(){
-      try{
+  async updatePost() {
+  if (!this.editId) return;
 
-      const formData = new FormData();
-      formData.append("title", this.title);
-      formData.append("description", this.description);
 
-      if (this.image) {
-        formData.append("image", this.image);
-      }
-          await axios.put(`http://127.0.0.1:8000/api/posts/${this.editId}`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-          }catch (error) {
-        console.error(error.response.data);
-      }
+  try {
+
+    const postData = {
+      title: this.title,
+      description: this.description,
+
+    //   image: this.image ? this.image : undefined,
+    };
+
+    const formData = new FormData();
+
+    if (this.selectedFile) {
+          formData.append("image", this.image); // Use selectedFile here
+        }
+
+    // console.log(formData);
+
+    // Send a JSON payload instead of FormData
+    await axios.put(`http://127.0.0.1:8000/api/posts/${this.editId}`, postData, formData,{
+      headers: {
+        "Content-Type": "application/json",
       },
+    });
+
+    this.title = '';
+      this.description = '';
+      this.selectedFile = null;
+      this.imagePreview = null;
+
+      // Clear validation flags
+      this.validation.titleStatus = false;
+      this.validation.descriptionStatus = false;
+      this.validation.imageStatus = false;
+
+      // Fetch updated posts list
+      await this.fetchPosts();
+  } catch (error) {
+    console.error("Error updating post:", error);
+  }
+},
+
+
       async fetchPosts() {
       try {
         const response = await axios.get('http://127.0.0.1:8000/api/posts');
