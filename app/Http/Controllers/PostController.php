@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Post;
 
 class PostController extends Controller
@@ -50,25 +51,53 @@ class PostController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Post $post)
-    {
-        $validatedData = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
 
-        // Update image if a new one is provided
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('images', 'public');
-            $validatedData['image'] = $imagePath;
+
+public function update(Request $request, Post $post)
+{
+
+    $validatedData = $request->validate([
+        'title' => 'required|string|max:255',
+        'description' => 'required|string',
+        'image' => 'nullable|string',
+    ]);
+
+
+    $post->title = $validatedData['title'];
+    $post->description = $validatedData['description'];
+
+
+    if ($request->has('image') && $request->image) {
+        $imageData = $request->image;
+
+
+        if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+            $imageType = $matches[1];
+
+
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageData = base64_decode($imageData);
+
+
+            $imageName = 'post_' . time() . '.' . $imageType;
+
+
+            Storage::disk('public')->put('images/' . $imageName, $imageData);
+
+
+            $post->image = 'images/' . $imageName;
+        } else {
+            return response()->json(['error' => 'Invalid image data'], 400);
         }
-
-        // Update the post with validated data
-        $post->update($validatedData);
-
-        return response()->json(['message' => 'Post updated successfully', 'post' => $post], 200);
     }
+
+
+    $post->save();
+
+
+    return response()->json(['message' => 'Post updated successfully', 'post' => $post], 200);
+}
+
 
 
 

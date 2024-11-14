@@ -25,7 +25,10 @@
               <label for="fileInput" class="col-sm-2 col-form-label fw-bold">Image</label>
               <div class="col-sm-10">
                 <!-- <input type="file" class="form-control" id="fileInput"> -->
-                <input type="file" class="form-control" id="fileInput" @change="onFileChange" >
+
+                <input type="file" class="form-control" id="fileInput" v-if="editId" @change="onFileChange" >
+                <input type="file" class="form-control" id="fileInput" v-else @change="fileChange" >
+
                 <small class="text-danger" v-if="validation.imageStatus">Image Is Required</small>
 
                 <div v-if="imagePreview" class="mt-3">
@@ -110,16 +113,34 @@
 
     },
     methods: {
-        onFileChange(event) {
-        this.image = event.target.files[0]; // Capture the selected file
+    fileChange(event){
+            this.image = event.target.files[0];
         if (this.image) {
-    this.imagePreview = URL.createObjectURL(this.image); // Create preview URL for image
-  }
-},
+    this.imagePreview = URL.createObjectURL(this.image);
+        }
+    },
+    onFileChange(event) {
+    const file = event.target.files[0];
+    if (file) {
+      this.selectedFile = file;
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+
+      reader.onload = () => {
+        this.imagePreview = reader.result;
+        this.image = reader.result;
+      };
+
+      reader.onerror = (error) => {
+        console.error("Error reading file:", error);
+      };
+    }
+  },
 
 
   async createPost() {
-    // Validate inputs
+
     this.validation.titleStatus = !this.title;
     this.validation.descriptionStatus = !this.description;
     this.validation.imageStatus = !this.image && !this.imagePreview;
@@ -142,30 +163,18 @@
           "Content-Type": "multipart/form-data",
         },
       });
-      // if (this.editId) {
-      //   // If we're updating an existing post, use PUT
-      //   await axios.put(`http://127.0.0.1:8000/api/posts/${this.editId}`, formData, {
-      //     headers: {
-      //       "Content-Type": "multipart/form-data",
-      //     },
-      //   });
-      //   this.editId = null; // Clear editId after updating
-      // } else {
-        // If we're creating a new post, use POST
-      // }
 
-      // Reset form data after successful save
       this.title = '';
       this.description = '';
       this.image = null;
       this.imagePreview = null;
 
-      // Clear validation flags
+
       this.validation.titleStatus = false;
       this.validation.descriptionStatus = false;
       this.validation.imageStatus = false;
 
-      // Fetch updated posts list
+
       await this.fetchPosts();
     } catch (error) {
       console.error(error.response.data);
@@ -182,20 +191,14 @@
     const postData = {
       title: this.title,
       description: this.description,
+      image: this.image ? this.image : null,
 
-    //   image: this.image ? this.image : undefined,
     };
 
-    const formData = new FormData();
 
-    if (this.selectedFile) {
-          formData.append("image", this.image); // Use selectedFile here
-        }
 
-    // console.log(formData);
 
-    // Send a JSON payload instead of FormData
-    await axios.put(`http://127.0.0.1:8000/api/posts/${this.editId}`, postData, formData,{
+    await axios.put(`http://127.0.0.1:8000/api/posts/${this.editId}`, postData, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -205,13 +208,15 @@
       this.description = '';
       this.selectedFile = null;
       this.imagePreview = null;
+      this.image = null;
+      this.editId = null;
 
-      // Clear validation flags
+
       this.validation.titleStatus = false;
       this.validation.descriptionStatus = false;
       this.validation.imageStatus = false;
 
-      // Fetch updated posts list
+
       await this.fetchPosts();
   } catch (error) {
     console.error("Error updating post:", error);
