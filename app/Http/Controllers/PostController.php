@@ -43,10 +43,23 @@ class PostController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Post $post)
-    {
-        //
-    }
+    // public function show(Post $post)
+    // {
+    //     // $post = Post::where ('id', $id)->first();
+    //     $post->first();
+    //     return response()->json([
+    //         'post'=> $post
+    //     ]);
+    // }
+   // In your PostController
+
+   public function show($postId)
+   {
+       $post = Post::findOrFail($postId);
+       return response()->json($post);
+   }
+
+
 
     /**
      * Update the specified resource in storage.
@@ -110,5 +123,15 @@ public function update(Request $request, Post $post)
     $post->delete();
 
     return response()->json(['message' => 'Post deleted successfully'], 200);
+    }
+
+    public function search(Request $request)
+    {
+        $searchKey = $request->input('key');  // Get search key
+        $posts = Post::where('title', 'like', "%$searchKey%")
+                     ->orWhere('description', 'like', "%$searchKey%")
+                     ->get();
+
+        return response()->json(['posts' => $posts], 200);
     }
 }

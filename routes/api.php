@@ -14,3 +14,12 @@ Route::get('/user', function (Request $request) {
 // Route::delete('/posts/{id}', [PostController::class, 'destroy']);
 
 Route::apiResource('/posts',PostController::class);
+
+Route::post('/posts/search', [PostController::class, 'search']);
+
+// Route::post('/posts/details', PostController::class, 'postDetails');
+// api.php
+Route::get('posts/{id}', [PostController::class, 'show']);
+
+
+
