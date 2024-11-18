@@ -1,19 +1,22 @@
 // import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-// import postDetail from '../components/PostDetail.vue'
-
-
-
-
+import PostDetail from '../components/PostDetail.vue'
+import Post from '../components/Post.vue'
 export const routes = [
     {
-        path: '/post',
+        path: '/',
         name: 'post',
-        component: () => import('../components/Post.vue')
+        component: Post,
     },
     {
-        path: '/postDetail',
+        path: '/postDetail/:postId',  // <-- This is the change
         name: 'postDetail',
-        component: ()=>import('../components/PostDetail.vue')
+        component: PostDetail,
+        // props: true, // Allows passing postId as a prop
     }
-
 ]
+// const router = createRouter({
+//     history: createWebHistory(process.env.BASE_URL),
+//     routes
+//   })
+
+//   export default router

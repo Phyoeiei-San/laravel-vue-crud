@@ -53,11 +53,16 @@ class PostController extends Controller
     // }
    // In your PostController
 
-   public function show($postId)
-   {
-       $post = Post::findOrFail($postId);
-       return response()->json($post);
-   }
+   // Laravel Controller Method
+public function show($id) {
+    $post = Post::find($id);
+
+    if (!$post) {
+        return response()->json(['error' => 'Post not found'], 404);
+    }
+
+    return response()->json(['post' => $post], 200);
+}
 
 
 

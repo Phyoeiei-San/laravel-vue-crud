@@ -1,16 +1,15 @@
 <template>
     <div class="container my-5">
-      <div class="card">
-        <div class="card-header bg-primary text-white">
-          <h5>{{ post.title }}</h5>
+      <h1>Post Details</h1>
+      <div v-if="post">
+        <h2>{{ post.title }}</h2>
+        <p>{{ post.description }}</p>
+        <div v-if="post.image">
+          <img :src="`/storage/${post.image}`" alt="Post Image" width="300" />
         </div>
-        <div class="card-body">
-          <p><strong>Description:</strong> {{ post.description }}</p>
-          <div v-if="post.image">
-            <img :src="`/storage/${post.image}`" width="300" height="300" alt="Post Image" />
-          </div>
-          <p v-else>No image available.</p>
-        </div>
+      </div>
+      <div v-else>
+        <p>Loading post details...</p>
       </div>
     </div>
   </template>
@@ -20,39 +19,34 @@
 
   export default {
     name: 'PostDetail',
-    props: ['postId'],  // Accept the postId as a prop from the route
     data() {
       return {
         post: null,
+        loadingStatus: false,
       };
     },
     async created() {
-      this.fetchPostDetail();
+      await this.fetchPost();
     },
     methods: {
-      async fetchPostDetail() {
+      async fetchPost() {
+        const postId = this.$route.params.postId; // Access postId from route params
+        this.loadingStatus = true;
         try {
-          const response = await axios.get(`http://127.0.0.1:8000/api/posts/${this.postId}`);
-          this.post = response.data;
+          const response = await axios.get(`http://127.0.0.1:8000/api/posts/${postId}`);
+          this.post = response.data.post; // Set the fetched post data
         } catch (error) {
-          console.error("Error fetching post details:", error);
+          console.error('Error fetching post details:', error.response.data);
+        } finally {
+          this.loadingStatus = false;
         }
-      }
-    }
+      },
+    },
+    watch: {
+      // Watch for changes in the route parameter
+      '$route.params.postId': function () {
+        this.fetchPost();
+      },
+    },
   };
   </script>
-
-  <style scoped>
-  .card-header h5 {
-    margin: 0;
-  }
-
-  .card-body {
-    padding: 20px;
-  }
-
-  img {
-    max-width: 100%;
-    height: auto;
-  }
-  </style>
