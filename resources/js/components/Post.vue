@@ -9,11 +9,11 @@
               type="text"
               class="form-control mb-3"
               v-model="searchKey"
-              v-on:keyup.enter="search"
+              v-on:keyup.enter="searchPost"
               placeholder="Search posts..."
             />
           </div>
-          <button class="btn btn-dark text-white btn-sm mx-3 mb-3" @click="search">Search</button>
+          <button class="btn btn-dark text-white btn-sm mx-3 mb-3" @click="searchPost">Search</button>
         </div>
 
         <!-- Form and Table Section (side by side) -->
@@ -24,7 +24,9 @@
               <h5 class="mb-0">{{ editId ? 'Update New Post' : 'Create New Post' }}</h5>
             </div>
             <div class="card-body">
-              <form @submit.prevent="editId ? updatePost() : createPost()">
+            <form @submit.prevent="handleSubmit">
+
+              <!-- <form @submit.prevent="editId ? updatePost() : createPost()"> -->
                 <div class="mb-3 row">
                   <label for="title" class="col-sm-2 col-form-label fw-bold">Title</label>
                   <div class="col-sm-10">
@@ -35,7 +37,7 @@
                       placeholder="Enter Title"
                       v-model="title"
                     />
-                    <small class="text-danger" v-if="validation.titleStatus">Title Is Required</small>
+                    <!-- <small class="text-danger" v-if="validation.titleStatus">Title Is Required</small> -->
                   </div>
                 </div>
                 <div class="mb-3 row">
@@ -48,7 +50,7 @@
                       placeholder="Enter Description"
                       v-model="description"
                     ></textarea>
-                    <small class="text-danger" v-if="validation.descriptionStatus">Description Is Required</small>
+                    <!-- <small class="text-danger" v-if="validation.descriptionStatus">Description Is Required</small> -->
                   </div>
                 </div>
                 <div class="mb-3 row">
@@ -68,7 +70,7 @@
                       v-else
                       @change="fileChange"
                     />
-                    <small class="text-danger" v-if="validation.imageStatus">Image Is Required</small>
+                    <!-- <small class="text-danger" v-if="validation.imageStatus">Image Is Required</small> -->
 
                     <div v-if="imagePreview" class="mt-3">
                       <p>Current Image:</p>
@@ -77,6 +79,7 @@
                   </div>
                 </div>
                 <div class="text-center">
+
                   <button type="submit" class="btn btn-primary">{{ editId ? 'Update' : 'Create' }}</button>
                 </div>
               </form>
@@ -109,17 +112,12 @@
                       <span v-else>No Image</span> <!-- Fallback if no image is uploaded -->
                     </td>
                     <td>
-                      <button class="btn btn-success ml-3 " @click="editPost(post)">Edit</button>
+                        <button class="btn btn-success ml-3" @click="editPost(post)">Edit</button>
+
                       <button class="btn btn-danger ml-3" @click="confirmDelete(post.id)">Delete</button>
-                      <!-- <router-link :to="{ name: 'postDetail', params: { postId: post.id } }">
-                        <button class="btn btn-primary">View Post</button>
-                        </router-link> -->
                         <router-link :to="{ name: 'postDetail', params: { postId: post.id } }">
                             <button class="btn btn-primary ml-3">View </button>
                         </router-link>
-                        <!-- <router-link to="/post">View</router-link> -->
-
-                        <!-- <button class="btn btn-primary ml-3" @click="postDetail(post.id)">View</button> -->
 
                     </td>
                   </tr>
@@ -129,43 +127,92 @@
           </div>
         </div>
 
-        <!-- <router-view></router-view> -->
       </div>
     </div>
-    <!-- <router-view/> -->
   </template>
     <router-link></router-link>
   <script>
 
-  import axios from 'axios';
+//   import axios from 'axios';
+import { mapState, mapActions, mapGetters } from 'vuex';
 
-  export default {
-    name: 'Post',
-
+export default {
     data() {
-      return {
+  return {
+        editId: null,
         title: '',
         description: '',
-        image: null,
+        file: null,
         imagePreview: null,
-        posts: [],
-        editId: null,
-        validation: {
-          titleStatus: false,
-          descriptionStatus: false,
-          imageStatus: false,
-        },
         searchKey: '',
-      };
-    },
-    methods: {
-      fileChange(event) {
-        this.image = event.target.files[0];
-        if (this.image) {
-          this.imagePreview = URL.createObjectURL(this.image);
-        }
-      },
-      onFileChange(event) {
+  };
+},
+
+  computed: {
+    ...mapState(['posts']),
+    ...mapGetters(['getPosts']),
+  },
+  methods: {
+    ...mapActions(['fetchPosts', 'createPost', 'updatePost', 'deletePost', 'searchPost']),
+
+
+handleSubmit() {
+    // console.log('this is updating',id);
+  if (this.editId) {
+    const formData = {
+        'id': this.editId,
+        'title': this.title,
+        'description': this.description,
+        'image': this.file,
+
+
+    }
+
+    this.updatePost(formData).then(() => {
+      this.fetchPosts();
+      this.resetForm();
+    });
+  } else {
+      const formData = new FormData();
+      formData.append('title', this.title);
+      formData.append('description', this.description);
+      if (this.file) formData.append('image', this.file);
+
+      this.createPost(formData).then(() => {
+        this.fetchPosts();
+        this.resetForm();
+      });
+    }
+},
+
+
+  resetForm() {
+    this.editId = null;
+    this.title = '';
+    this.description = '';
+    this.file = null;
+    this.imagePreview = null;
+  },
+  editPost(post) {
+  this.editId = post.id;
+  this.title = post.title;
+  this.description = post.description;
+  this.imagePreview = post.image ? `/storage/${post.image}` : null;
+},
+
+
+fileChange(event) {
+  const file = event.target.files[0];
+  this.file = file;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    this.imagePreview = e.target.result; // Base64 preview
+  };
+  reader.readAsDataURL(file);
+},
+
+onFileChange(event) {
         const file = event.target.files[0];
         if (file) {
           this.selectedFile = file;
@@ -174,7 +221,7 @@
 
           reader.onload = () => {
             this.imagePreview = reader.result;
-            this.image = reader.result;
+            this.file = reader.result;
           };
 
           reader.onerror = (error) => {
@@ -182,148 +229,26 @@
           };
         }
       },
-
-      async createPost() {
-        this.validation.titleStatus = !this.title;
-        this.validation.descriptionStatus = !this.description;
-        this.validation.imageStatus = !this.image && !this.imagePreview;
-
-        if (this.validation.titleStatus || this.validation.descriptionStatus || this.validation.imageStatus) {
-          return;
-        }
-
-        try {
-          const formData = new FormData();
-          formData.append('title', this.title);
-          formData.append('description', this.description);
-
-          if (this.image) {
-            formData.append('image', this.image);
-          }
-
-          await axios.post('http://127.0.0.1:8000/api/posts', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          });
-
-          this.title = '';
-          this.description = '';
-          this.image = null;
-          this.imagePreview = null;
-
-          this.validation.titleStatus = false;
-          this.validation.descriptionStatus = false;
-          this.validation.imageStatus = false;
-
-          await this.fetchPosts();
-        } catch (error) {
-          console.error(error.response.data);
-        }
-      },
-
-      async updatePost() {
-        if (!this.editId) return;
-
-        try {
-          const postData = {
-            title: this.title,
-            description: this.description,
-            image: this.image ? this.image : null,
-          };
-
-          await axios.put(`http://127.0.0.1:8000/api/posts/${this.editId}`, postData, {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          this.title = '';
-          this.description = '';
-          this.selectedFile = null;
-          this.imagePreview = null;
-          this.image = null;
-          this.editId = null;
-
-          this.validation.titleStatus = false;
-          this.validation.descriptionStatus = false;
-          this.validation.imageStatus = false;
-
-          await this.fetchPosts();
-        } catch (error) {
-          console.error('Error updating post:', error);
-        }
-      },
-
-      async fetchPosts() {
-        try {
-          const response = await axios.get('http://127.0.0.1:8000/api/posts');
-          this.posts = response.data.posts;
-        } catch (error) {
-          console.error(error.response.data);
-        }
-      },
-      editPost(post) {
-        this.title = post.title;
-        this.description = post.description;
-        this.editId = post.id;
-        this.imagePreview = `/storage/${post.image}`;
-      },
-      async deletePost(id) {
-        try {
-          await axios.delete(`http://127.0.0.1:8000/api/posts/${id}`);
-          await this.fetchPosts();
-        } catch (error) {
-          console.error(error.response.data);
-        }
-      },
       confirmDelete(id) {
         if (confirm('Are you sure you want to delete this post?')) {
           this.deletePost(id);
         }
       },
-      async search() {
-        const search = {
-          key: this.searchKey,
-        };
 
-        try {
-          const response = await axios.post('http://127.0.0.1:8000/api/posts/search', search);
-          console.log(response.data);
-          this.posts = response.data.posts; // Update posts with search results
-        } catch (error) {
-          console.error(error.response.data);
-        }
-      },
-    //   postDetail(id){
-    //     // alert(id);
-    //     this.$router.push({
-    //         name: 'postDetail',
-    //         params: {
-    //             postId: id,
-    //         }
-    //     })
-    //   }
-    // postDetail(id) {
-
-    //     // alert("hello");
-    //   this.$router.push({ name: 'postDetail', params: { postId: id } });
-    // },
-
-    postDetail(id) {
-    // console.log("Navigating to post detail with ID:", id);
-    // alert(id);
-    this.$router.push({ name: 'postDetail', params: { postId: id } });
-}
-
-
+      searchPost() {
+      this.$store.dispatch('searchPost', this.searchKey);
     },
 
-    mounted() {
-      this.fetchPosts();
 
-    },
-  };
+  },
+  mounted() {
+    this.fetchPosts(); // Fetch posts on mount
+  },
+  watch: {
+    searchKey: 'searchPost',
+  },
+};
+
   </script>
 
   <style scoped>

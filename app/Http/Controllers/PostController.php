@@ -15,6 +15,8 @@ class PostController extends Controller
     {
         $posts = Post::all();
     return response()->json(['posts' => $posts], 200);
+
+
     }
 
     /**
@@ -71,50 +73,70 @@ public function show($id) {
      */
 
 
-public function update(Request $request, Post $post)
-{
+     public function update(Request $request, Post $post)
+     {
+         $validatedData = $request->validate([
+             'title' => 'required|string|max:255',
+             'description' => 'required|string',
+             'image' => 'nullable',
+         ]);
 
-    $validatedData = $request->validate([
-        'title' => 'required|string|max:255',
-        'description' => 'required|string',
-        'image' => 'nullable|string',
-    ]);
+         $post->title = $validatedData['title'];
+         $post->description = $validatedData['description'];
 
+        //  Handle Base64 image
+         if ($request->has('image') && $request->image) {
+             $imageData = $request->image;
 
-    $post->title = $validatedData['title'];
-    $post->description = $validatedData['description'];
+             if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+                 $imageType = $matches[1];
+                 $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+                 $imageData = base64_decode($imageData);
 
+                 $imageName = 'post_' . time() . '.' . $imageType;
 
-    if ($request->has('image') && $request->image) {
-        $imageData = $request->image;
+                 Storage::disk('public')->put('images/' . $imageName, $imageData);
 
+                 // Delete old image if it exists
+                 if ($post->image) {
+                     Storage::disk('public')->delete($post->image);
+                 }
 
-        if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
-            $imageType = $matches[1];
+                 $post->image = 'images/' . $imageName;
+             } else {
+                 return response()->json(['error' => 'Invalid image data'], 400);
+             }
+         }
 
+         // Handle FormData image (optional)
+         if ($request->hasFile('image')) {
+             $imagePath = $request->file('image')->store('images', 'public');
 
-            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
-            $imageData = base64_decode($imageData);
+             // Delete old image if it exists
+             if ($post->image) {
+                 Storage::disk('public')->delete($post->image);
+             }
 
+             $post->image = $imagePath;
+         }
 
-            $imageName = 'post_' . time() . '.' . $imageType;
+         $post->save();
 
+         return response()->json(['message' => 'Post updated successfully', 'post' => $post], 200);
+     }
+//     public function update(Request $request, Post $post)
+// {
+//     $validatedData = $request->validate([
+//         'title' => 'required|string|max:255',
+//         'description' => 'required|string',
+//         'image' => 'nullable|image|max:2048',
+//     ]);
 
-            Storage::disk('public')->put('images/' . $imageName, $imageData);
+//     $post->update($validatedData);
 
+//     return response()->json(['message' => 'Post updated successfully', 'post' => $post], 200);
+// }
 
-            $post->image = 'images/' . $imageName;
-        } else {
-            return response()->json(['error' => 'Invalid image data'], 400);
-        }
-    }
-
-
-    $post->save();
-
-
-    return response()->json(['message' => 'Post updated successfully', 'post' => $post], 200);
-}
 
 
 
